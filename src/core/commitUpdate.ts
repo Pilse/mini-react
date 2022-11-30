@@ -15,7 +15,7 @@ export function commitRootFiber(rootFiber: Fiber) {
 
 export function getParentFiber(fiber: Fiber) {
   let parentFiber: Nullable<Fiber> = fiber.parent;
-  while (parentFiber && parentFiber.dom === null) {
+  while (parentFiber && !!!parentFiber.dom) {
     parentFiber = parentFiber.parent;
   }
   return parentFiber;
@@ -28,15 +28,15 @@ export function commitFiberUpdate(fiber: Fiber) {
 
   const parentDom = parentFiber.dom;
 
-  if (fiber.effectTag === "PLACEMENT" && fiber.dom) {
+  if (fiber.type && fiber.effectTag === "PLACEMENT" && fiber.dom) {
     commitAddDom(parentDom, fiber);
   }
 
-  if (fiber.effectTag === "UPDATE" && fiber.dom) {
+  if (fiber.type && fiber.effectTag === "UPDATE" && fiber.dom) {
     commitUpdateDomProerty(fiber.dom, fiber.alternate?.props, fiber.props);
   }
 
-  if (fiber.effectTag === "DELETE") {
+  if (fiber.type && fiber.effectTag === "DELETE") {
     commitDeleteDom(parentDom, fiber);
   }
 

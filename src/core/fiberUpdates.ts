@@ -43,6 +43,8 @@ export function updateHostComponent(fiber: Fiber) {
 }
 
 export function createDom(fiber: Fiber) {
+  if (fiber.type === undefined) return null;
+
   const dom: Node =
     fiber.type === "TEXT_ELEMENT" ? document.createTextNode("") : document.createElement(fiber.type);
 

@@ -19,7 +19,7 @@ function createElement(type: any, props: object, ...children: Fiber[]) {
     type: type,
     props: {
       ...props,
-      children: children.map((child) => (typeof child === "object" ? child : createTextElement(child))),
+      children: children.flatMap((child) => (typeof child === "object" ? child : createTextElement(child))),
     },
   });
 }
