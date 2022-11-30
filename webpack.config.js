@@ -5,7 +5,7 @@ const port = 3000;
 
 module.exports = {
   mode: "development",
-  entry: `./index.tsx`,
+  entry: `./src/index.tsx`,
   output: {
     path: `${__dirname}/dist`,
     filename: "[name].bundle.js",

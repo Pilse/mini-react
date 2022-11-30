@@ -1,4 +1,4 @@
-import { Fiber, getNextFiber, isFunctionComponent } from "./fiber";
+import { createDefaultProps, Fiber, getNextFiber, isFunctionComponent } from "./fiber";
 import { canCommit, context, isWorkInProgress } from "./context";
 import { reconcilFiberChildren } from "./fiberReconcil";
 import { commitAddedEventListener, commitAddedProperty, commitRootFiber } from "./commitUpdate";
@@ -28,10 +28,12 @@ export function updateFiberByType(fiber: Fiber) {
 
 export function updateFunctionComponent(fiber: Fiber) {
   if (!isWorkInProgress(context.workInProgressFiber)) return;
+
   context.workInProgressFiber.hooks = [];
   context.hookIndex = 0;
 
   fiber.props.children = [fiber.type(fiber.props)];
+
   reconcilFiberChildren(fiber);
 }
 export function updateHostComponent(fiber: Fiber) {
@@ -44,8 +46,8 @@ export function createDom(fiber: Fiber) {
   const dom: Node =
     fiber.type === "TEXT_ELEMENT" ? document.createTextNode("") : document.createElement(fiber.type);
 
-  commitAddedProperty(dom, {}, fiber.props);
-  commitAddedEventListener(dom, {}, fiber.props);
+  commitAddedProperty(dom, createDefaultProps(), fiber.props);
+  commitAddedEventListener(dom, createDefaultProps(), fiber.props);
 
   return dom;
 }

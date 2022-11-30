@@ -1,10 +1,10 @@
 import { context } from "./context";
-import { Fiber } from "./fiber";
+import { Fiber, NodeProps, FiberProps, createDefaultProps } from "./fiber";
 
 export function commitRootFiber(rootFiber: Fiber) {
   if (!rootFiber.child) return;
 
-  context.deletedQueue.forEach((deletion) => commitFiberUpdate(deletion));
+  context.deletedQueue.forEach(commitFiberUpdate);
   context.deletedQueue = [];
 
   commitFiberUpdate(rootFiber.child);
@@ -13,13 +13,20 @@ export function commitRootFiber(rootFiber: Fiber) {
   context.unCommitedRootFiber = null;
 }
 
-export function commitFiberUpdate(fiber: Fiber) {
-  let parentFiber: Nullable<Fiber> = fiber.parent!;
+export function getParentFiber(fiber: Fiber) {
+  let parentFiber: Nullable<Fiber> = fiber.parent;
   while (parentFiber && parentFiber.dom === null) {
     parentFiber = parentFiber.parent;
   }
+  return parentFiber;
+}
 
-  const parentDom = parentFiber!.dom!;
+export function commitFiberUpdate(fiber: Fiber) {
+  const parentFiber = getParentFiber(fiber);
+
+  if (!parentFiber || !parentFiber.dom) return;
+
+  const parentDom = parentFiber.dom;
 
   if (fiber.effectTag === "PLACEMENT" && fiber.dom) {
     commitAddDom(parentDom, fiber);
@@ -39,8 +46,8 @@ export function commitFiberUpdate(fiber: Fiber) {
 
 export function commitUpdateDomProerty(
   dom: Node,
-  prevProps: Record<string, unknown> = {},
-  nextProps: Record<string, unknown> = {}
+  prevProps: FiberProps = createDefaultProps(),
+  nextProps: FiberProps
 ) {
   commitDeletedEventListener(dom, prevProps, nextProps);
   commitAddedEventListener(dom, prevProps, nextProps);
@@ -49,8 +56,10 @@ export function commitUpdateDomProerty(
 }
 
 export function commitAddDom(parent: Node, child: Fiber) {
-  parent.appendChild(child.dom!);
+  if (!child.dom) return;
+  parent.appendChild(child.dom);
 }
+
 export function commitDeleteDom(parent: Node, child: Fiber) {
   while (!child.dom) child = child.child!;
   parent.removeChild(child.dom);
@@ -60,18 +69,18 @@ export function isEvent(key: string) {
   return key.startsWith("on");
 }
 
-export function isProperty(key: string) {
+export function isProperty(key: string): key is keyof NodeProps {
   return key !== "children" && !isEvent(key);
 }
 
-export function isNewProperty(prevProps: Record<string, unknown>, nextProps: Record<string, unknown>) {
-  return function (key: string) {
+export function isNewProperty(prevProps: FiberProps, nextProps: FiberProps) {
+  return function (key: string): key is keyof NodeProps {
     return prevProps[key] !== nextProps[key];
   };
 }
 
-export function isDeletedProperty(prevProps: Record<string, unknown>, nextProps: Record<string, unknown>) {
-  return function (key: string) {
+export function isDeletedProperty(prevProps: FiberProps, nextProps: FiberProps) {
+  return function (key: string): key is keyof NodeProps {
     return key in prevProps && !(key in nextProps);
   };
 }
@@ -80,11 +89,7 @@ export function getEventNameFromOnEvent(onEventName: string) {
   return onEventName.substring(2).toLowerCase();
 }
 
-export function commitDeletedEventListener(
-  dom: Node,
-  prevProps: Record<string, unknown> = {},
-  nextProps: Record<string, unknown> = {}
-) {
+export function commitDeletedEventListener(dom: Node, prevProps: FiberProps, nextProps: FiberProps) {
   Object.keys(prevProps)
     .filter(isEvent)
     .filter((key) => isDeletedProperty(prevProps, nextProps)(key) || isNewProperty(prevProps, nextProps)(key))
@@ -96,11 +101,7 @@ export function commitDeletedEventListener(
     );
 }
 
-export function commitAddedEventListener(
-  dom: Node,
-  prevProps: Record<string, unknown> = {},
-  nextProps: Record<string, unknown> = {}
-) {
+export function commitAddedEventListener(dom: Node, prevProps: FiberProps, nextProps: FiberProps) {
   Object.keys(nextProps)
     .filter(isEvent)
     .filter((key) => isNewProperty(prevProps, nextProps)(key))
@@ -112,24 +113,18 @@ export function commitAddedEventListener(
     );
 }
 
-export function commitDeletedProperty(
-  dom: Node,
-  prevProps: Record<string, unknown> = {},
-  nextProps: Record<string, unknown> = {}
-) {
+export function commitDeletedProperty(dom: Node, prevProps: FiberProps, nextProps: FiberProps) {
   Object.keys(prevProps)
     .filter(isProperty)
     .filter((key) => isDeletedProperty(prevProps, nextProps)(key))
     .forEach((key) => delete dom[key as keyof Node]);
 }
 
-export function commitAddedProperty(
-  dom: Node,
-  prevProps: Record<string, unknown> = {},
-  nextProps: Record<string, unknown> = {}
-) {
+export function commitAddedProperty(dom: Node, prevProps: FiberProps, nextProps: FiberProps) {
   Object.keys(nextProps)
     .filter(isProperty)
     .filter((key) => isNewProperty(prevProps, nextProps)(key))
-    .forEach((key) => (dom[key] = nextProps[key]));
+    .forEach(<T extends keyof NodeProps>(key: T) => {
+      dom[key] = nextProps[key] as Node[T];
+    });
 }

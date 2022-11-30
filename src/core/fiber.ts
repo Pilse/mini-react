@@ -1,3 +1,6 @@
+export type NodeProps = Partial<Pick<Node, WritableKeys<Node>>>;
+export type FiberProps = NodeProps & { [k: string]: unknown; children: Fiber[] };
+
 export type Fiber = {
   type: any;
   alternate: Nullable<Fiber>;
@@ -7,7 +10,7 @@ export type Fiber = {
   effectTag: Nullable<"UPDATE" | "DELETE" | "PLACEMENT">;
   hooks: Nullable<any[]>;
   dom: Nullable<Node>;
-  props: Record<string, unknown> & { children: Fiber[] };
+  props: FiberProps;
 };
 
 export function createFiber({
@@ -55,4 +58,8 @@ export function isFunctionComponent(fiber: Fiber) {
 
 export function hasFiberHasEmptyChildren(fiber: Fiber) {
   return fiber.props.children.length === 0;
+}
+
+export function createDefaultProps(): FiberProps {
+  return { children: [] };
 }

@@ -47,9 +47,11 @@ export function reconcilReplacedChildren(
 export function reconcilDeletedChildren(alternate: Nullable<Fiber>, prevSibling: Nullable<Fiber> = null) {
   while (alternate) {
     alternate.effectTag = "DELETE";
+
     if (prevSibling) {
       prevSibling.sibling = alternate;
     }
+
     prevSibling = alternate;
     alternate = alternate.sibling;
   }
@@ -74,17 +76,11 @@ export function reconcilChildrenCompareToAlternate(
       context.deletedQueue.push(alternate);
     }
 
-    if (idx === FirstChild) {
-      parent.child = newFiber;
-      prevSibling = newFiber;
-      idx++;
-      alternate = alternate.sibling;
-      continue;
-    }
+    if (idx === FirstChild) parent.child = newFiber;
+    if (prevSibling) prevSibling.sibling = newFiber;
 
     idx++;
     alternate = alternate.sibling;
-    prevSibling!.sibling = newFiber;
     prevSibling = newFiber;
   }
 

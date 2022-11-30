@@ -1,6 +1,6 @@
-import { context } from "../context";
-import { createFiber, Fiber } from "../fiber";
-import { updateRootFiberIfIdle } from "../fiberUpdates";
+import { context } from "../core/context";
+import { createFiber, Fiber } from "../core/fiber";
+import { updateRootFiberIfIdle } from "../core/fiberUpdates";
 
 function render(element: Fiber, container: Nullable<Node>) {
   context.unCommitedRootFiber = createFiber({
@@ -36,9 +36,9 @@ function createTextElement(text: string) {
 
 type HookState<T> = {
   state: T;
-  actions: Function[];
+  actions: (Function | T)[];
 };
-function useState<T>(initial: T) {
+function useState<T>(initial: T): [T, (action: T | ((prev: T) => void)) => void] {
   const alternate = context.workInProgressFiber?.alternate;
   const oldHook: Nullable<HookState<T>> = alternate?.hooks ? alternate.hooks[context.hookIndex] : null;
 
@@ -49,21 +49,24 @@ function useState<T>(initial: T) {
 
   const actions = oldHook ? oldHook.actions : [];
   actions.forEach((action) => {
-    hook.state = action(hook.state);
+    hook.state = action instanceof Function ? action(hook.state) : action;
   });
 
-  const setState = (action: Function) => {
+  const setState = (action: Function | T) => {
     hook.actions.push(action);
+
     context.unCommitedRootFiber = createFiber({
       dom: context.recentlyCommittedRootFiber?.dom,
       props: context.recentlyCommittedRootFiber?.props,
       alternate: context.recentlyCommittedRootFiber,
     });
     context.workInProgressFiber = context.unCommitedRootFiber;
+    context.deletedQueue = [];
+
     requestIdleCallback(updateRootFiberIfIdle);
   };
 
-  context.workInProgressFiber!.hooks!.push(hook);
+  context.workInProgressFiber?.hooks?.push(hook);
   context.hookIndex++;
 
   return [hook.state, setState];
